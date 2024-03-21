@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Visual Instruction Tuning">
+  <meta name="keywords" content="multimodal chatbot">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TAPTR: A Simple Baseline for <u>T</u>racking <u>A</u>ny <u>P</u>oint with <u>TR</u>ansformers</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <!-- <link rel="icon" href="images/icon-cl.png"> -->
+  <!-- <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> -->
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/js/all.min.js"></script>
+  <script type="module" src="https://gradio.s3-us-west-2.amazonaws.com/3.39.0/gradio.js"></script>
+  
+<script id="MathJax-script" async
+src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+</head>
+
+<style>
+  .expandable-card .card-text-container {
+    max-height: 200px;
+    overflow-y: hidden;
+    position: relative;
+  }
+
+  .expandable-card.expanded .card-text-container {
+    max-height: none;
+  }
+
+  .expand-btn {
+    position: relative;
+    display: none;
+    background-color: rgba(255, 255, 255, 0.8);
+    /* margin-top: -20px; */
+    /* justify-content: center; */
+    color: #510c75;
+    border-color: transparent;
+  }
+
+  .expand-btn:hover {
+    background-color: rgba(200, 200, 200, 0.8);
+    text-decoration: none;
+    border-color: transparent;
+    color: #510c75;
+  }
+
+  .expand-btn:focus {
+    outline: none;
+    text-decoration: none;
+  }
+
+  .expandable-card:not(.expanded) .card-text-container:after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 90px;
+    background: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 1));
+  }
+
+  .expandable-card:not(.expanded) .expand-btn {
+    margin-top: -40px;
+  }
+
+  .card-body {
+    padding-bottom: 5px;
+  }
+
+  .vertical-flex-layout {
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .figure-img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .adjustable-font-size {
+    font-size: calc(0.5rem + 2vw);
+  }
+
+  .chat-history {
+    flex-grow: 1;
+    overflow-y: auto;
+    /* overflow-x: hidden; */
+    padding: 5px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+  }
+
+  #gradio pre {
+    background-color: transparent;
+  }
+</style>
+
+<body>
+
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">TAPTR: <u>T</u>racking <u>A</u>ny <u>P</u>oint with <u>TR</u>ansformers as Detection
+            <h4></h4>
+            <br>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="https://scholar.google.com.hk/citations?user=zdgHNmkAAAAJ&hl=en" style="color:#f68946;font-weight:normal;">Hongyang Li<sup><b style="color:#f68946; font-weight:normal">&#x25B6 </b></sup></a>,
+              </span>
+              <span class="author-block">
+                <a href="https://scholar.google.com/citations?user=B8hPxMQAAAAJ&hl=zh-CN" style="color:#a800d7;font-weight:normal;">Hao Zhang<sup><b style="color:#a800d7; font-weight:normal">&#x25B6 </b></sup></a>,
+              </span>
+              <span class="author-block">
+                <a href="https://lsl.zone/" style="color:#f5643f;font-weight:normal;">Shilong Liu<sup><b style="color:#f5643f; font-weight:normal">&#x25B6 </b></sup></a>,
+              </span>
+              <span class="author-block">
+                <a href="https://scholar.google.com/citations?user=U_cvvUwAAAAJ&hl=zh-CN&oi=ao" style="color:#0071f2;font-weight:normal;">Zhaoyang Zeng<sup><b style="color:#0071f2; font-weight:normal">&#x25B6 </b></sup></a>,
+              </span>
+              <span class="author-block">
+                <a href="https://rentainhe.github.io/" style="color:#0071f2;font-weight:normal;">Tianhe Ren<sup><b style="color:#0071f2; font-weight:normal">&#x25B6 </b></sup></a>,
+              </span>
+              <span class="author-block">
+                <a href="https://fengli-ust.github.io/" style="color:#a800d7;font-weight:normal;">Feng Li<sup><b style="color:#a800d7; font-weight:normal">&#x25B6 </b></sup></a>,
+              </span>
+              <span class="author-block">
+                <a href="https://www.leizhang.org/" style="color:#0071f2;font-weight:normal;">Lei Zhang<sup>&#x2628;</sup><sup><b style="color:#0071f2; font-weight:normal">&#x25B6 </b></sup></a>,
+              </span>
+              
+            </div>
+            
+            <br>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><b style="color:#f68946; font-weight:normal">&#x25B6 </b> SCUT</b></span>
+              <span class="author-block"><b style="color:#a800d7; font-weight:normal">&#x25B6 </b> HKUST</span>
+              <span class="author-block"><b style="color:#f5643f; font-weight:normal">&#x25B6 </b> Tsinghua University </span>
+              <span class="author-block"><b style="color:#0071f2; font-weight:normal">&#x25B6 </b> IDEA Research</span>
+            </div>
+            
+            <div class="is-size-6 publication-authors">
+              <span class="author-block"><sup>&#x2628;</sup> Corresponding author</span><br>
+              <span class="author-block">This work was done while Hongyang Li, Hao Zhang, Shilong Liu, and Feng Li were interns at IDEA.</span>
+              
+            </div>
+            <br>
+
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <span class="link-block">
+                  <a href="https://arxiv.org/abs/*" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                    </span>
+                    <span>arXiv</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="https://github.com/IDEA-Research/TAPTR" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="https://taptr-trajectory.deepdataspace.com" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="far fa-images"></i>
+                    </span>
+                    <span>Demo-Trajectory</span>
+                  </a>
+                </span>
+                <span class="link-block">
+                  <a href="https://taptr-videoediting.deepdataspace.com" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="far fa-images"></i>
+                    </span>
+                    <span>Demo-VideoEditing</span>
+                  </a>
+                </span>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="section"  style="background-color:#efeff081">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-six-fifths">
+        <h2 class="title is-3"><span style="font-size: 100%;">TAPTR in video editing and trajectory prediction. </h2>
+          <div class="video">
+            <video width="320" height="240" controls>
+              <source src="./images/VideoEdit_box.mp4" type="video/mp4">
+            </video>
+            <video width="320" height="240" controls>
+              <source src="./images/VideoEdit_sofa.mp4" type="video/mp4">
+            </video>
+            <video width="320" height="240" controls>
+              <source src="./images/VideoEdit_bed.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="video">
+            <video width="320" height="240" controls>
+              <source src="./images/VideoEdit_roll_basketball.mp4" type="video/mp4">
+            </video>
+            <video width="320" height="240" controls>
+              <source src="./images/Traj_Handwriting.mp4" type="video/mp4">
+            </video>
+            <video width="320" height="240" controls>
+              <source src="./images/Traj_RabbitAndYogurt.mp4" type="video/mp4">
+            </video>
+          </div>
+  
+  </div>
+  <br>
+  </section>
+  
+  
+
+  <section class="section"  style="background-color:#efeff081">
+    <div class="container is-max-desktop">
+      <!-- Abstract. -->
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-six-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+              In this paper, we propose a simple and strong framework for Tracking Any Point with TRansformer (TAPTR). Based on the observation that point tracking bears a great resemblance to object detection and tracking, we borrow designs from DETR-like algorithms to address the task of TAP. In the proposed framework, each tracking point is represented as a DETR query, which consists of a positional part and a content part. As in DETR, each query (its position and content feature) is naturally updated layer by layer. Its visibility is predicted by its updated content feature. Queries belonging to the same tracking point can exchange information through temporal self-attention. As all such operations are well-designed in DETR-like algorithms, the model is conceptually very simple. We also adopt some useful designs such as cost volume from optical flow models and develop simple designs to mitigate the feature drifting issue. Our framework demonstrates strong performance with state-of-the-art performance on various TAP datasets with faster inference speed.
+
+:hammer_and_wrench: Method
+Comparison with previous methods
+ Inspired by detection transformer (DETR), we find that point tracking bears a great resemblance to object detection and tracking. In particular, tracking points can be essentially regarded as queries, which have been extensively studied in DETR-like algorithms. The well-studied DETR-like framework makes our TAPTR conceptually simple yet performance-wise strong.
+              
+           </p>
+  
+          </div>
+        </div>
+      </div>
+        
+    </div>
+  </section>
+
+
+
+
+
+<section class="section">
+  <!-- Results. -->
+  <div class="columns is-centered has-text-centered">
+    <div class="column is-six-fifths">
+      <h2 class="title is-3">TAPTR Network Architechture</h2>
+    </div>
+  </div>
+  <!-- </div> -->
+  <!--/ Results. -->    
+<div class="container is-max-desktop">
+
+  <div class="columns is-centered">
+    <div class="column is-full-width">
+      <div class="content has-text-justified"> 
+
+          <centering>
+            <div style="text-align: center;">
+              <img id="teaser" width="90%" src="images/overview.png">     
+            </div>
+          </centering> 
+        <p>
+          The video preparation and query preparation parts provide the multi-scale feature map, point queries, and the cost volumes for the point decoder. The point decoder takes these elements as input and processes all frames in parallel. The outputs of the point decoder are sent to our window post-processing module to update the states of the point queries to their belonging tracking points.
+          
+         
+
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="section">
+  <!-- Results. -->
+  <div class="columns is-centered has-text-centered">
+    <div class="column is-six-fifths">
+      <h2 class="title is-3">Performance
+      </h2>
+    </div>
+  </div>
+  <!-- </div> -->
+  <!--/ Results. -->    
+<div class="container is-max-desktop">
+
+  <div class="columns is-centered">
+    <div class="column is-full-width">
+      <div class="content has-text-justified"> 
+
+          <centering>
+            <div style="text-align: center;">
+              <img id="teaser" width="90%" src="images/performance.png">     
+            </div>
+          </centering> 
+        <p>
+          We evaluate TAPTR on the TAP-Vid benchmark to show its superiority. As shown in the tabel, TAPTR shows significant superiority compared with previous SoTA methods across the majority of metrics while maintins the advantage in inference speed. To evaluate the tracking speed of different methods fairly, we compare the Point Per Second (PPS), which is the average number of points that a tracker can track across the entire video per second on the DAVIS dataset in the ``First'' mode.
+          
+         
+
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+  
+
+
+<script>
+let slideIndex = 0;
+showSlides();
+
+function showSlides() {
+  let i;
+  let slides = document.getElementsByClassName("mySlides");
+  let dots = document.getElementsByClassName("dot");
+  for (i = 0; i < slides.length; i++) {
+    slides[i].style.display = "none";  
+  }
+  slideIndex++;
+  if (slideIndex > slides.length) {slideIndex = 1}    
+  for (i = 0; i < dots.length; i++) {
+    dots[i].className = dots[i].className.replace(" active", "");
+  }
+  slides[slideIndex-1].style.display = "block";  
+  dots[slideIndex-1].className += " active";
+  setTimeout(showSlides, 4000); // Change image every 1 seconds
+}
+</script>
+
+
+
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>
+        @misc{liu2023improvedllava,
+          title={TAPTR: A Simple Baseline for Tracking Any Point with Transformers},
+          author={Hongyang Li and Hao Zhang and Shilong Liu and Zhaoyang Zeng and Tianhe Ren and Feng Li and Lei Zhang},
+          publisher={arXiv:2403.13042},
+          year={2024},
+        }
+  </code></pre>
+    </div>
+  </section>
+  
+
+</body>
+
+</html>
